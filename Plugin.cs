@@ -6,7 +6,9 @@ using Riptide;
 using Riptide.Transports.Steam;
 using Riptide.Transports.Udp;
 using Riptide.Utils;
+using Steamworks;
 using System;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace MayoOps
@@ -26,29 +28,51 @@ namespace MayoOps
             harmony = new(MyPluginInfo.PLUGIN_GUID);
             harmony.PatchAll();
             RiptideLogger.Initialize(Logger.LogInfo, Logger.LogInfo, Logger.LogWarning, Logger.LogError, false);
-            SteamNetworking = true;
+            UseSteamNetworking = true;
+            SteamAPI.Init();
+
+            Task.Factory.StartNew(RiptideThread);
+        }
+
+        private void RiptideThread() {
+            while (Application.isPlaying) {
+                if (server.IsRunning)
+                    server.Update();
+                client.Update();
+                return;
+            }
+            server.Stop();
+            client.Disconnect();
+            LobbyManager.LeaveLobby();
+            server = null;
+            client = null;
         }
 
         void Start() => LobbyManager.Start();
         internal string address;
         private static bool steamNetworking = true;
-        public static bool SteamNetworking {
+        public static bool UseSteamNetworking {
             get => steamNetworking; set {
                 steamNetworking = value;
                 if (steamNetworking) {
-                    server.ChangeTransport(new SteamServer());
-                    client.ChangeTransport(new SteamClient());
+                    var steamServer = new SteamServer();
+                    server = new(steamServer);
+                    client = new(new Riptide.Transports.Steam.SteamClient(steamServer));
                 }
                 else {
-                    server.ChangeTransport(new UdpServer());
-                    client.ChangeTransport(new UdpClient());
+                    server = new(new UdpServer());
+                    client = new(new UdpClient());
                 }
             }
         }
         internal void OnGUI() {
             if (GUILayout.Button("Create Server")) {
                 LobbyManager.CreateLobby();
-                server.Start(7777, 16);
+                if(UseSteamNetworking)
+                    server.Start(0, 16);
+                else {
+                    server.Start(7777, 16);
+                }
                 JoinLocalServer();
             }
             address = GUILayout.TextField(address);
@@ -59,6 +83,7 @@ namespace MayoOps
             if(GUILayout.Button("Join Local Server")) JoinLocalServer();
             if (GUILayout.Button("Shutdown"))
                 Shutdown();
+            UseSteamNetworking = GUILayout.Toggle(UseSteamNetworking, "USE STEAM!?!?!");
             GUILayout.Box($"Hosting:{server.IsRunning}\nConnected: {client.IsConnected}\n");
         }
 
@@ -69,17 +94,20 @@ namespace MayoOps
         }
 
         public void JoinLocalServer() {
-            if (!client.Connect("127.0.0.1:7777")) {
-                if (!client.Connect("127.0.0.1"))
-                    if (!client.Connect("localhost:7777"))
-                        client.Connect("localhost");
+            try {
+                if (UseSteamNetworking)
+                    client.Connect("127.0.0.1");
+                else
+                    client.Connect("localhost:7777");
+            }
+            catch {
+
             }
         }
 
         internal void Update() {
             PlayerMessages.Update();
-            server.Update();
-            client.Update();
+            SteamAPI.RunCallbacks();
         }
     }
 }

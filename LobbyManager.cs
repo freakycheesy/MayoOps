@@ -26,13 +26,13 @@ namespace MayoOps {
         }
 
         public static void CreateLobby() {
-            if (!Plugin.SteamNetworking)
+            if (!Plugin.UseSteamNetworking)
                 return;
-            SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, 5);
+            SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypePublic, 16);
         }
 
         public static void OnLobbyCreated(LobbyCreated_t callback) {
-            if (!Plugin.SteamNetworking)
+            if (!Plugin.UseSteamNetworking)
                 return;
             if (callback.m_eResult != EResult.k_EResultOK) {
                 return;
@@ -42,19 +42,19 @@ namespace MayoOps {
         }
 
         public static void JoinLobby(ulong lobbyId) {
-            if (!Plugin.SteamNetworking)
+            if (!Plugin.UseSteamNetworking)
                 return;
             SteamMatchmaking.JoinLobby(new CSteamID(lobbyId));
         }
 
         public static void OnGameLobbyJoinRequested(GameLobbyJoinRequested_t callback) {
-            if (!Plugin.SteamNetworking)
+            if (!Plugin.UseSteamNetworking)
                 return;
             SteamMatchmaking.JoinLobby(callback.m_steamIDLobby);
         }
 
         public static void OnLobbyEnter(LobbyEnter_t callback) {
-            if (!Plugin.SteamNetworking)
+            if (!Plugin.UseSteamNetworking)
                 return;
             if (Plugin.server.IsRunning)
                 return;
@@ -66,7 +66,7 @@ namespace MayoOps {
         }
 
         public static void LeaveLobby() {
-            if (!Plugin.SteamNetworking)
+            if (!Plugin.UseSteamNetworking)
                 return;
             SteamMatchmaking.LeaveLobby(lobbyId);
         }
